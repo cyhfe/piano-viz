@@ -80,16 +80,14 @@ function Note({ note }: NoteProps) {
   // }, [note]);
 
   return note && !end ? (
-    <rect className="note" x={195} y={20} width={10} height={10} fill="red">
+    <rect className="note" x={195} y={-20} width={10} height={10} fill="red">
       <animate
         ref={ref}
         attributeType="XML"
         attributeName="y"
-        from="0"
+        from="-20"
         to="300"
-        dur="10s"
-        repeatCount="1"
-        onAnimationEnd={() => console.log("end")}
+        dur="3s"
       />
     </rect>
   ) : null;
