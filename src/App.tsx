@@ -1,26 +1,28 @@
-import { useEffect, useRef } from "react";
-
+import { useEffect, useRef, useState } from "react";
+import { css, Global } from "@emotion/react";
 import { Midi } from "@tonejs/midi";
 import * as Tone from "tone";
+import NotesViz from "./NotesViz";
 
 function App() {
-  const midiRef = useRef<Midi | null>(null);
+  // const midiRef = useRef<Midi | null>(null);
+  const [midiData, setMidiData] = useState<Midi | null>(null);
 
   function handleClick() {
     play();
   }
 
   async function play() {
-    if (!midiRef.current) return;
+    if (!midiData) return;
     await Tone.start();
     //the file name decoded from the first track
-    const name = midiRef.current.name;
+    const name = midiData.name;
 
     const now = Tone.now() + 0.5;
 
     const synths = [];
     //get the tracks
-    midiRef.current.tracks.forEach((track) => {
+    midiData.tracks.forEach((track) => {
       //tracks have notes and controlChanges
       console.log(track.instrument);
 
@@ -52,16 +54,38 @@ function App() {
 
   useEffect(() => {
     async function getData() {
-      midiRef.current = await Midi.fromUrl("/assets/liszt_liebestraum.mid");
+      const data = await Midi.fromUrl("/assets/bach_inventions_773.mid");
+      setMidiData(data);
     }
     getData();
   }, []);
 
   return (
-    <div>
-      <button onClick={handleClick}>click</button>
-      app
-    </div>
+    <>
+      <div
+        css={css`
+          height: 100vh;
+        `}
+      >
+        <div
+          css={css`
+            height: 10%;
+          `}
+        >
+          123
+        </div>
+        <NotesViz data={midiData} />
+
+        <svg
+          viewBox="0 0 600 300"
+          css={css`
+            display: block;
+            width: 100%;
+            height: 10%;
+          `}
+        ></svg>
+      </div>
+    </>
   );
 }
 
