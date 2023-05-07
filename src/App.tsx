@@ -26,10 +26,9 @@ function App() {
 
     const synths = [];
     //get the tracks
-
     midiRef.current.tracks.forEach((track) => {
       //tracks have notes and controlChanges
-      console.log(track);
+      console.log(track.instrument);
 
       const synth = new Tone.PolySynth(Tone.Synth, {
         envelope: {
@@ -45,6 +44,7 @@ function App() {
       // console.log(notes);
 
       notes.forEach((note) => {
+        console.log(notes);
         //note.midi, note.time, note.duration, note.name
         synth.triggerAttackRelease(
           note.name,
@@ -56,7 +56,7 @@ function App() {
 
       //the control changes are an object
       //the keys are the CC number
-      // track.controlChanges[64];
+      // track.controlChanges[track.instrument.name];
       //they are also aliased to the CC number's common name (if it has one)
       // track.controlChanges.sustain.forEach((cc) => {
       //   // cc.ticks, cc.value, cc.time
@@ -69,7 +69,7 @@ function App() {
 
   useEffect(() => {
     async function getData() {
-      midiRef.current = await Midi.fromUrl("/assets/sd-theme.mid");
+      midiRef.current = await Midi.fromUrl("/assets/chopin_etude_rev.mid");
     }
     getData();
   }, []);
