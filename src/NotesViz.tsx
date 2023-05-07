@@ -3,12 +3,14 @@ import { Midi } from "@tonejs/midi";
 import { useEffect, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import * as d3 from "d3";
-
+import * as Tone from "tone";
+import { useSynth } from "./App";
 interface NotesVizProps {
   data: Midi | null;
+  isPlaying: boolean;
 }
 
-function NotesViz({ data }: NotesVizProps) {
+function NotesViz({ data, isPlaying }: NotesVizProps) {
   useEffect(() => {
     console.log(data);
   }, [data]);
@@ -28,7 +30,7 @@ function NotesViz({ data }: NotesVizProps) {
           return (
             <g className="track" key={uuidv4()}>
               {track.notes.map((note) => {
-                return <Note note={note} />;
+                return <Note note={note} isPlaying={isPlaying} />;
               })}
             </g>
           );
@@ -49,18 +51,39 @@ interface NoteJSON {
 
 interface NoteProps {
   note: NoteJSON;
+  isPlaying: boolean;
 }
 
-function Note({ note }: NoteProps) {
+function Note({ note, isPlaying }: NoteProps) {
   const ref = useRef<SVGElement | null>(null);
   const [end, setEnd] = useState(false);
+  const ctx = useSynth();
+  const { synth } = ctx;
   useEffect(() => {
     if (!ref.current) return;
     ref.current.addEventListener("endEvent", () => {
+      if (!synth) return;
       console.log("end");
       setEnd(true);
+      console.log(ctx);
+
+      // synth.triggerAttackRelease(note.name, note.duration, 0, note.velocity);
+      // Tone.Transport.scheduleOnce((time) => {
+      console.log(note);
+
+      synth.triggerAttackRelease(
+        note.name,
+        note.duration,
+        Tone.now(),
+        note.velocity
+      );
+      // }, note.time);
     });
-  }, []);
+  }, [ctx, note, synth]);
+
+  // useEffect(() => {
+
+  // }, [isPlaying])
   // useEffect(() => {
   //   if (!ref.current) return;
   //   console.log(note);
@@ -79,15 +102,18 @@ function Note({ note }: NoteProps) {
   //     .remove();
   // }, [note]);
 
-  return note && !end ? (
-    <rect className="note" x={195} y={-20} width={10} height={10} fill="red">
+  // 16.458333333333332 0.08854166666666785
+
+  return note && !end && isPlaying ? (
+    <rect className="note" x={195} width={10} height={10} fill="red">
       <animate
         ref={ref}
         attributeType="XML"
         attributeName="y"
         from="-20"
         to="300"
-        dur="3s"
+        dur={4 + "s"}
+        begin={note.time + "s"}
       />
     </rect>
   ) : null;
