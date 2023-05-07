@@ -7,13 +7,7 @@ function App() {
   const midiRef = useRef<Midi | null>(null);
 
   function handleClick() {
-    // await Tone.start();
     play();
-    // const synth = new Tone.Synth().toDestination();
-    // const now = Tone.now();
-    // synth.triggerAttackRelease("C4", "8n", now);
-    // synth.triggerAttackRelease("E4", "8n", now + 0.5);
-    // synth.triggerAttackRelease("G4", "8n", now + 1);
   }
 
   async function play() {
@@ -53,23 +47,12 @@ function App() {
           note.velocity
         );
       });
-
-      //the control changes are an object
-      //the keys are the CC number
-      // track.controlChanges[track.instrument.name];
-      //they are also aliased to the CC number's common name (if it has one)
-      // track.controlChanges.sustain.forEach((cc) => {
-      //   // cc.ticks, cc.value, cc.time
-      // });
-
-      //the track also has a channel and instrument
-      //track.instrument.name
     });
   }
 
   useEffect(() => {
     async function getData() {
-      midiRef.current = await Midi.fromUrl("/assets/chopin_etude_rev.mid");
+      midiRef.current = await Midi.fromUrl("/assets/liszt_liebestraum.mid");
     }
     getData();
   }, []);
