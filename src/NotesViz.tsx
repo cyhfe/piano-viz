@@ -11,31 +11,51 @@ interface NotesVizProps {
 }
 
 function NotesViz({ data, isPlaying }: NotesVizProps) {
+  const [time, setTime] = useState<number | null>(null);
+
   useEffect(() => {
-    console.log(data);
-  }, [data]);
+    let id: number | undefined;
+    function run() {
+      id = requestAnimationFrame(() => {
+        // console.log(Tone.Transport.now());
+        setTime(Tone.Transport.now());
+        run();
+      });
+    }
+    isPlaying && run();
+    return () => {
+      id && cancelAnimationFrame(id);
+    };
+  }, [isPlaying]);
+
   return (
-    <svg
-      css={css`
-        display: block;
-      `}
-      viewBox="0 ,0, 400, 300"
-      width={"100%"}
-      height={"80%"}
-      preserveAspectRatio="none"
-    >
-      <rect x={0} y={0} width={400} height={300} fill="black"></rect>
-      {data &&
-        data.tracks.map((track) => {
-          return (
-            <g className="track" key={uuidv4()}>
-              {track.notes.map((note) => {
-                return <Note note={note} isPlaying={isPlaying} />;
-              })}
-            </g>
-          );
-        })}
-    </svg>
+    <>
+      <div>{time}</div>
+      <svg
+        css={css`
+          display: block;
+        `}
+        viewBox="0 ,0, 400, 300"
+        width={"100%"}
+        height={"80%"}
+        preserveAspectRatio="none"
+      >
+        <rect x={0} y={0} width={400} height={300} fill="black"></rect>
+        {data &&
+          data.tracks.map((track) => {
+            if (!track.notes.length) return null;
+            return (
+              <g className="track" key={uuidv4()}>
+                {track.notes.map((note) => {
+                  if (time && note.time - 4 < time) {
+                    return <Note note={note} isPlaying={isPlaying} />;
+                  } else return null;
+                })}
+              </g>
+            );
+          })}
+      </svg>
+    </>
   );
 }
 
@@ -59,27 +79,28 @@ function Note({ note, isPlaying }: NoteProps) {
   const [end, setEnd] = useState(false);
   const ctx = useSynth();
   const { synth } = ctx;
-  useEffect(() => {
-    if (!ref.current) return;
-    ref.current.addEventListener("endEvent", () => {
-      if (!synth) return;
-      console.log("end");
-      setEnd(true);
-      console.log(ctx);
 
-      // synth.triggerAttackRelease(note.name, note.duration, 0, note.velocity);
-      // Tone.Transport.scheduleOnce((time) => {
-      console.log(note);
+  // useEffect(() => {
+  //   if (!ref.current) return;
+  //   ref.current.addEventListener("endEvent", () => {
+  //     if (!synth) return;
+  //     console.log("end");
+  //     setEnd(true);
+  //     console.log(ctx);
 
-      synth.triggerAttackRelease(
-        note.name,
-        note.duration,
-        Tone.now(),
-        note.velocity
-      );
-      // }, note.time);
-    });
-  }, [ctx, note, synth]);
+  //     // synth.triggerAttackRelease(note.name, note.duration, 0, note.velocity);
+  //     // Tone.Transport.scheduleOnce((time) => {
+  //     console.log(note);
+
+  //     // synth.triggerAttackRelease(
+  //     //   note.name,
+  //     //   note.duration,
+  //     //   Tone.now(),
+  //     //   note.velocity
+  //     // );
+  //     // }, note.time);
+  //   });
+  // }, [ctx, note, synth]);
 
   // useEffect(() => {
 
@@ -113,7 +134,7 @@ function Note({ note, isPlaying }: NoteProps) {
         from="-20"
         to="300"
         dur={4 + "s"}
-        begin={note.time + "s"}
+        begin={0}
       />
     </rect>
   ) : null;

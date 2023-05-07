@@ -46,53 +46,60 @@ function App() {
 
   async function play() {
     if (!midiData) return;
-    await Tone.start();
     //the file name decoded from the first track
     const name = midiData.name;
 
     const synths = [];
     //get the tracks
-    // Tone.Transport.start(4);
+    Tone.Transport.start(4);
     setIsPlaying(true);
   }
 
-  // useEffect(() => {
-  //   if (!midiData) return;
-  //   Tone.Transport.on("start", () => {
-  //     // setIsPlaying(true);
-  //     console.log("start");
-  //   });
-  //   midiData.tracks.forEach((track) => {
-  //     //tracks have notes and controlChanges
-  //     // console.log(track.instrument);
+  useEffect(() => {
+    async function init() {
+      if (!midiData) return;
+      await Tone.start();
 
-  //     const synth = new Tone.PolySynth(Tone.Synth, {
-  //       envelope: {
-  //         attack: 0.02,
-  //         decay: 0.1,
-  //         sustain: 0.3,
-  //         release: 1,
-  //       },
-  //     }).toDestination();
-  //     // synths.push(synth);
-  //     //notes are an array
-  //     const notes = track.notes;
-  //     // console.log(notes);
+      Tone.Transport.on("start", () => {
+        // setIsPlaying(true);
+        console.log("start");
+      });
 
-  //     notes.forEach((note) => {
-  //       // console.log(notes);
-  //       //note.midi, note.time, note.duration, note.name
-  //       // Tone.Transport.scheduleOnce((time) => {
-  //       //   synth.triggerAttackRelease(
-  //       //     note.name,
-  //       //     note.duration,
-  //       //     time,
-  //       //     note.velocity
-  //       //   );
-  //       // }, note.time);
-  //     });
-  //   });
-  // }, [midiData]);
+      midiData.tracks.forEach((track) => {
+        //tracks have notes and controlChanges
+        // console.log(track.instrument);
+
+        const synth = new Tone.PolySynth(Tone.Synth, {
+          envelope: {
+            attack: 0.02,
+            decay: 0.1,
+            sustain: 0.3,
+            release: 1,
+          },
+        }).toDestination();
+        // synths.push(synth);
+        //notes are an array
+        const notes = track.notes;
+        // console.log(notes);
+
+        notes.forEach((note) => {
+          // console.log(notes);
+          //note.midi, note.time, note.duration, note.name
+          Tone.Transport.scheduleOnce((time) => {
+            console.log(time);
+
+            synth.triggerAttackRelease(
+              note.name,
+              note.duration,
+              time,
+              note.velocity
+            );
+          }, note.time);
+        });
+      });
+    }
+    init();
+  }, [midiData]);
 
   useEffect(() => {
     async function getData() {
@@ -102,18 +109,18 @@ function App() {
     getData();
   }, []);
 
-  useEffect(() => {
-    if (!synthRef.current) {
-      synthRef.current = new Tone.PolySynth(Tone.Synth, {
-        envelope: {
-          attack: 0.02,
-          decay: 0.1,
-          sustain: 0.3,
-          release: 1,
-        },
-      }).toDestination();
-    }
-  }, []);
+  // useEffect(() => {
+  //   if (!synthRef.current) {
+  //     synthRef.current = new Tone.PolySynth(Tone.Synth, {
+  //       envelope: {
+  //         attack: 0.02,
+  //         decay: 0.1,
+  //         sustain: 0.3,
+  //         release: 1,
+  //       },
+  //     }).toDestination();
+  //   }
+  // }, []);
 
   return (
     <SynthProvider synth={synthRef.current}>
