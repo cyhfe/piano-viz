@@ -25,9 +25,15 @@ function NotesViz({ notes, setNotes }: NotesVizProps) {
         preserveAspectRatio="none"
       >
         <rect x={0} y={0} width={400} height={300} fill="black">
-          {/* {notes.map((note) => {
-            return <Note note={note} setNotes={setNotes} />;
-          })} */}
+          {notes.map((note) => {
+            return (
+              <Note
+                key={note.name + note.time}
+                note={note}
+                setNotes={setNotes}
+              />
+            );
+          })}
         </rect>
       </svg>
     </>
@@ -53,8 +59,6 @@ interface NoteProps {
 function Note({ note, isPlaying, setNotes }: NoteProps) {
   const ref = useRef<SVGElement | null>(null);
   const [end, setEnd] = useState(false);
-  const ctx = useSynth();
-  const { synth } = ctx;
 
   useEffect(() => {
     if (!ref.current) return;
@@ -63,20 +67,8 @@ function Note({ note, isPlaying, setNotes }: NoteProps) {
       console.log("end");
       // setEnd(true);
       setNotes((notes) => notes.filter((n) => n !== note));
-
-      // synth.triggerAttackRelease(note.name, note.duration, 0, note.velocity);
-      // Tone.Transport.scheduleOnce((time) => {
-      // console.log(note);
-
-      // synth.triggerAttackRelease(
-      //   note.name,
-      //   note.duration,
-      //   Tone.now(),
-      //   note.velocity
-      // );
-      // }, note.time);
     });
-  }, []);
+  }, [note, setNotes]);
 
   // useEffect(() => {
 
@@ -101,7 +93,7 @@ function Note({ note, isPlaying, setNotes }: NoteProps) {
 
   // 16.458333333333332 0.08854166666666785
 
-  return note && !end && isPlaying ? (
+  return (
     <rect className="note" x={195} width={10} height={10} fill="red">
       <animate
         ref={ref}
@@ -113,7 +105,7 @@ function Note({ note, isPlaying, setNotes }: NoteProps) {
         begin={0}
       />
     </rect>
-  ) : null;
+  );
 }
 
 export default NotesViz;
