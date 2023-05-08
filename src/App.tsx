@@ -5,6 +5,7 @@ import * as Tone from "tone";
 import NotesViz from "./NotesViz";
 import { NoteJSON } from "@tonejs/midi/dist/Note";
 import * as d3 from "d3";
+import { useScale } from "./useScale";
 
 function App() {
   const [midiData, setMidiData] = useState<Midi | null>(null);
@@ -13,6 +14,8 @@ function App() {
     null
   );
   const notesRef = useRef<SVGRectElement | null>(null);
+
+  const { xScale, yScale } = useScale();
 
   function handleClick() {
     play();
@@ -27,6 +30,7 @@ function App() {
   const schedule = useCallback(
     function schedule() {
       if (!midiData) return () => void 0;
+      yScale.domain([0, midiData.duration]);
       const id = Tone.Transport.schedule((time) => {
         midiData.tracks.forEach((track) => {
           const notes = track.notes;
@@ -34,6 +38,7 @@ function App() {
             Tone.Draw.schedule(() => {
               if (Tone.Transport.state !== "started") return;
               console.log(Tone.Transport.now(), note.time + time);
+              console.log(note.name);
 
               synthRef.current?.triggerAttackRelease(
                 note.name,
@@ -41,17 +46,15 @@ function App() {
                 note.time + time + 4,
                 note.velocity
               );
-              // do drawing or DOM manipulation here
-              // setNotes((notes) => [...notes, note]);
+
               if (!notesRef.current) return;
-              // const notesGroup = d3.select(notesRef.current).append("g");
               const rect = d3.select(notesRef.current).append("rect");
 
               rect
-                .attr("x", "150")
+                .attr("x", xScale(note.name))
                 .attr("y", "0")
-                .attr("width", "10")
-                .attr("height", "10")
+                .attr("width", xScale.bandwidth())
+                .attr("height", yScale(note.duration) * 20)
                 .attr("fill", "red")
                 .transition()
                 .ease(d3.easeLinear)
@@ -80,14 +83,14 @@ function App() {
         attack: 0.02,
         decay: 0.1,
         sustain: 0.3,
-        release: 1,
+        // release: 1,
       },
     }).toDestination();
   }, []);
 
   useEffect(() => {
     async function getData() {
-      const data = await Midi.fromUrl("/assets/bach_inventions_775.mid");
+      const data = await Midi.fromUrl("/assets/sd1.mid");
       setMidiData(data);
     }
     getData();
