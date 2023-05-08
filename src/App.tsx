@@ -10,6 +10,7 @@ import { css, Global } from "@emotion/react";
 import { Midi } from "@tonejs/midi";
 import * as Tone from "tone";
 import NotesViz from "./NotesViz";
+import { NoteJSON } from "@tonejs/midi/dist/Note";
 
 const SynthContext = createContext<SynthContextValue | null>(null);
 interface SynthContextValue {
@@ -36,8 +37,16 @@ function App() {
   // const midiRef = useRef<Midi | null>(null);
   const [midiData, setMidiData] = useState<Midi | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const synthRef = useRef<Tone.PolySynth<Tone.Synth<Tone.SynthOptions>> | null>(
-    null
+  const [notes, setNotes] = useState<NoteJSON[]>([]);
+  const synthRef = useRef<Tone.PolySynth<Tone.Synth<Tone.SynthOptions>>>(
+    new Tone.PolySynth(Tone.Synth, {
+      envelope: {
+        attack: 0.02,
+        decay: 0.1,
+        sustain: 0.3,
+        release: 1,
+      },
+    }).toDestination()
   );
   // const time = useRef(null)
   function handleClick() {
@@ -46,57 +55,39 @@ function App() {
 
   async function play() {
     if (!midiData) return;
-    //the file name decoded from the first track
-    const name = midiData.name;
-
-    const synths = [];
-    //get the tracks
-    Tone.Transport.start(4);
-    setIsPlaying(true);
+    await Tone.start();
+    Tone.Transport.start();
+    // setIsPlaying(true);
   }
 
   useEffect(() => {
     async function init() {
       if (!midiData) return;
-      await Tone.start();
 
       Tone.Transport.on("start", () => {
         // setIsPlaying(true);
         console.log("start");
       });
 
-      midiData.tracks.forEach((track) => {
-        //tracks have notes and controlChanges
-        // console.log(track.instrument);
-
-        const synth = new Tone.PolySynth(Tone.Synth, {
-          envelope: {
-            attack: 0.02,
-            decay: 0.1,
-            sustain: 0.3,
-            release: 1,
-          },
-        }).toDestination();
-        // synths.push(synth);
-        //notes are an array
-        const notes = track.notes;
-        // console.log(notes);
-
-        notes.forEach((note) => {
-          // console.log(notes);
-          //note.midi, note.time, note.duration, note.name
-          Tone.Transport.scheduleOnce((time) => {
-            console.log(time);
-
-            synth.triggerAttackRelease(
+      Tone.Transport.schedule((time) => {
+        midiData.tracks.forEach((track) => {
+          const notes = track.notes;
+          notes.forEach((note) => {
+            synthRef.current.triggerAttackRelease(
               note.name,
               note.duration,
-              time,
+              note.time + time + 4,
               note.velocity
             );
-          }, note.time);
+
+            Tone.Draw.schedule(() => {
+              // do drawing or DOM manipulation here
+              setNotes((notes) => [...notes, note]);
+              console.log(time, Tone.now(), note.time);
+            }, note.time + time);
+          });
         });
-      });
+      }, 0.5);
     }
     init();
   }, [midiData]);
@@ -108,19 +99,6 @@ function App() {
     }
     getData();
   }, []);
-
-  // useEffect(() => {
-  //   if (!synthRef.current) {
-  //     synthRef.current = new Tone.PolySynth(Tone.Synth, {
-  //       envelope: {
-  //         attack: 0.02,
-  //         decay: 0.1,
-  //         sustain: 0.3,
-  //         release: 1,
-  //       },
-  //     }).toDestination();
-  //   }
-  // }, []);
 
   return (
     <SynthProvider synth={synthRef.current}>
@@ -142,7 +120,12 @@ function App() {
           ></button>
         </div>
 
-        <NotesViz data={midiData} isPlaying={isPlaying} />
+        <NotesViz
+          notes={notes}
+          setNotes={setNotes}
+          data={midiData}
+          isPlaying={isPlaying}
+        />
 
         <svg
           viewBox="0 0 600 300"
