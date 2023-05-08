@@ -1,6 +1,6 @@
 import { css } from "@emotion/react";
 import { Midi } from "@tonejs/midi";
-import { useEffect, useRef, useState } from "react";
+import { forwardRef, useEffect, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import * as d3 from "d3";
 import * as Tone from "tone";
@@ -12,7 +12,10 @@ interface NotesVizProps {
   setNotes: React.Dispatch<React.SetStateAction<NoteJSON[]>>;
 }
 
-function NotesViz({ notes, setNotes }: NotesVizProps) {
+const NotesViz = forwardRef<SVGRectElement, NotesVizProps>(function NotesViz(
+  props,
+  ref
+) {
   return (
     <>
       <svg
@@ -25,7 +28,7 @@ function NotesViz({ notes, setNotes }: NotesVizProps) {
         preserveAspectRatio="none"
       >
         <rect x={0} y={0} width={400} height={300} fill="black">
-          {notes.map((note) => {
+          {/* {notes.map((note) => {
             return (
               <Note
                 key={note.name + note.time}
@@ -33,12 +36,13 @@ function NotesViz({ notes, setNotes }: NotesVizProps) {
                 setNotes={setNotes}
               />
             );
-          })}
+          })} */}
         </rect>
+        <g ref={ref}></g>
       </svg>
     </>
   );
-}
+});
 
 interface NoteJSON {
   time: number;
@@ -65,35 +69,12 @@ function Note({ note, isPlaying, setNotes }: NoteProps) {
     ref.current.addEventListener("endEvent", () => {
       // if (!synth) return;
       console.log("end");
-      // setEnd(true);
-      setNotes((notes) => notes.filter((n) => n !== note));
+      setEnd(true);
+      // setNotes((notes) => notes.filter((n) => n !== note));
     });
   }, [note, setNotes]);
 
-  // useEffect(() => {
-
-  // }, [isPlaying])
-  // useEffect(() => {
-  //   if (!ref.current) return;
-  //   console.log(note);
-
-  //   d3.select(ref.current)
-  //     .attr("x", 195)
-  //     .attr("y", 20)
-  //     .attr("width", "10")
-  //     .attr("height", "10")
-  //     .attr("fill", "blue")
-  //     .transition()
-  //     .duration(note.duration + 10000)
-  //     .delay(note.time)
-  //     .attr("x", 195)
-  //     .attr("y", 300)
-  //     .remove();
-  // }, [note]);
-
-  // 16.458333333333332 0.08854166666666785
-
-  return (
+  return !end ? (
     <rect className="note" x={195} width={10} height={10} fill="red">
       <animate
         ref={ref}
@@ -105,7 +86,7 @@ function Note({ note, isPlaying, setNotes }: NoteProps) {
         begin={0}
       />
     </rect>
-  );
+  ) : null;
 }
 
 export default NotesViz;
