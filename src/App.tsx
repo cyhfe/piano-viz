@@ -12,6 +12,17 @@ import * as Tone from "tone";
 import NotesViz from "./NotesViz";
 import { NoteJSON } from "@tonejs/midi/dist/Note";
 import * as d3 from "d3";
+function formatDurationPart(num: number) {
+  return num < 10 ? `0${num}` : `${num}`;
+}
+function formatDuration(nbSeconds: number) {
+  const minutes = Math.floor(nbSeconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const seconds = Math.round((nbSeconds / 60 - minutes) * 60);
+  return `${formatDurationPart(hours)}:${formatDurationPart(
+    minutes
+  )}:${formatDurationPart(seconds)}`;
+}
 
 const SynthContext = createContext<SynthContextValue | null>(null);
 interface SynthContextValue {
@@ -38,10 +49,13 @@ function App() {
   // const midiRef = useRef<Midi | null>(null);
   const [midiData, setMidiData] = useState<Midi | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [second, setSecond] = useState(0);
   const [notes, setNotes] = useState<NoteJSON[]>([]);
   const synthRef = useRef<Tone.PolySynth<Tone.Synth<Tone.SynthOptions>> | null>(
     null
   );
+
+  const schaduleId = useRef<number | null>(null);
 
   const notesRef = useRef<SVGRectElement | null>(null);
   // const time = useRef(null)
@@ -77,10 +91,15 @@ function App() {
         console.log("start");
       });
 
-      Tone.Transport.schedule((time) => {
-        midiData.tracks.forEach((track) => {
-          const notes = track.notes;
-          notes.forEach((note) => {
+      Tone.Transport.on("stop", () => {
+        // setIsPlaying(true);
+        console.log("stop");
+      });
+
+      midiData.tracks.forEach((track) => {
+        const notes = track.notes;
+        notes.forEach((note) => {
+          schaduleId.current = Tone.Transport.schedule((time) => {
             synthRef.current?.triggerAttackRelease(
               note.name,
               note.duration,
@@ -110,18 +129,18 @@ function App() {
                   rect.remove();
                 });
 
-              console.log(time, Tone.now(), note.time);
+              // console.log(time, Tone.now(), note.time);
             }, note.time + time);
-          });
+          }, 0.5);
         });
-      }, 0.5);
+      });
     }
     init();
   }, [midiData]);
 
   useEffect(() => {
     async function getData() {
-      const data = await Midi.fromUrl("/assets/bach_inventions_773.mid");
+      const data = await Midi.fromUrl("/assets/bach_inventions_775.mid");
       setMidiData(data);
     }
     getData();
@@ -142,9 +161,27 @@ function App() {
           <button onClick={() => handleClick()}>++</button>
           <button
             onClick={() => {
-              // console.log(Tone.Transport.now());
+              // Tone.Transport.stop();
+
+              // Tone.Transport.stop(); // Returns timeline to position 0:0:0
+              // schaduleId.current && Tone.Transport.clear(schaduleId.current);
+              console.log(Tone.Transport);
+              // Tone.Transport.seconds = 10;
+              Tone.Transport.stop();
+
+              Tone.Transport.cancel();
             }}
-          ></button>
+          >
+            pause
+          </button>
+          <input
+            type="range"
+            min={0}
+            max={midiData?.duration}
+            onChange={(e) => {
+              Tone.Transport.seconds = Number(e.target.value);
+            }}
+          />
         </div>
 
         <NotesViz
