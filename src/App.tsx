@@ -1,113 +1,46 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import { css, Global } from "@emotion/react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { css } from "@emotion/react";
 import { Midi } from "@tonejs/midi";
 import * as Tone from "tone";
 import NotesViz from "./NotesViz";
 import { NoteJSON } from "@tonejs/midi/dist/Note";
 import * as d3 from "d3";
-function formatDurationPart(num: number) {
-  return num < 10 ? `0${num}` : `${num}`;
-}
-function formatDuration(nbSeconds: number) {
-  const minutes = Math.floor(nbSeconds / 60);
-  const hours = Math.floor(minutes / 60);
-  const seconds = Math.round((nbSeconds / 60 - minutes) * 60);
-  return `${formatDurationPart(hours)}:${formatDurationPart(
-    minutes
-  )}:${formatDurationPart(seconds)}`;
-}
-
-const SynthContext = createContext<SynthContextValue | null>(null);
-interface SynthContextValue {
-  synth: Tone.PolySynth<Tone.Synth<Tone.SynthOptions>> | null;
-}
-interface SynthProviderProps {
-  children: React.ReactNode;
-  synth: Tone.PolySynth<Tone.Synth<Tone.SynthOptions>> | null;
-}
-function SynthProvider({ children, synth }: SynthProviderProps) {
-  const ctx = useMemo(() => {
-    return { synth };
-  }, [synth]);
-  return <SynthContext.Provider value={ctx}>{children}</SynthContext.Provider>;
-}
-
-function useSynth(): SynthContextValue {
-  const ctx = useContext(SynthContext);
-  if (!ctx) throw Error;
-  return ctx;
-}
 
 function App() {
-  // const midiRef = useRef<Midi | null>(null);
   const [midiData, setMidiData] = useState<Midi | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [second, setSecond] = useState(0);
   const [notes, setNotes] = useState<NoteJSON[]>([]);
   const synthRef = useRef<Tone.PolySynth<Tone.Synth<Tone.SynthOptions>> | null>(
     null
   );
-
-  const schaduleId = useRef<number | null>(null);
-
   const notesRef = useRef<SVGRectElement | null>(null);
-  // const time = useRef(null)
+
   function handleClick() {
     play();
   }
 
   async function play() {
-    if (!midiData) return;
+    if (!midiData || Tone.Transport.state === "started") return;
     await Tone.start();
     Tone.Transport.start();
-    // setIsPlaying(true);
   }
 
-  useEffect(() => {
-    if (synthRef.current) return;
-    synthRef.current = new Tone.PolySynth(Tone.Synth, {
-      envelope: {
-        attack: 0.02,
-        decay: 0.1,
-        sustain: 0.3,
-        release: 1,
-      },
-    }).toDestination();
-  }, []);
-
-  useEffect(() => {
-    async function init() {
-      if (!midiData) return;
-
-      Tone.Transport.on("start", () => {
-        // setIsPlaying(true);
-        console.log("start");
-      });
-
-      Tone.Transport.on("stop", () => {
-        // setIsPlaying(true);
-        console.log("stop");
-      });
-
-      midiData.tracks.forEach((track) => {
-        const notes = track.notes;
-        notes.forEach((note) => {
-          schaduleId.current = Tone.Transport.schedule((time) => {
-            synthRef.current?.triggerAttackRelease(
-              note.name,
-              note.duration,
-              note.time + time + 4,
-              note.velocity
-            );
-
+  const schedule = useCallback(
+    function schedule() {
+      if (!midiData) return () => void 0;
+      const id = Tone.Transport.schedule((time) => {
+        midiData.tracks.forEach((track) => {
+          const notes = track.notes;
+          notes.forEach((note) => {
             Tone.Draw.schedule(() => {
+              if (Tone.Transport.state !== "started") return;
+              console.log(Tone.Transport.now(), note.time + time);
+
+              synthRef.current?.triggerAttackRelease(
+                note.name,
+                note.duration,
+                note.time + time + 4,
+                note.velocity
+              );
               // do drawing or DOM manipulation here
               // setNotes((notes) => [...notes, note]);
               if (!notesRef.current) return;
@@ -128,15 +61,29 @@ function App() {
                 .then(() => {
                   rect.remove();
                 });
-
-              // console.log(time, Tone.now(), note.time);
             }, note.time + time);
-          }, 0.5);
+          });
         });
-      });
-    }
-    init();
-  }, [midiData]);
+      }, 0.5);
+
+      return function cancel() {
+        Tone.Transport.clear(id);
+      };
+    },
+    [midiData]
+  );
+
+  useEffect(() => {
+    if (synthRef.current) return;
+    synthRef.current = new Tone.PolySynth(Tone.Synth, {
+      envelope: {
+        attack: 0.02,
+        decay: 0.1,
+        sustain: 0.3,
+        release: 1,
+      },
+    }).toDestination();
+  }, []);
 
   useEffect(() => {
     async function getData() {
@@ -146,63 +93,51 @@ function App() {
     getData();
   }, []);
 
+  useEffect(() => {
+    const cancel = schedule();
+    return () => cancel();
+  }, [schedule]);
+
   return (
-    <SynthProvider synth={synthRef.current}>
+    <div
+      css={css`
+        height: 100vh;
+      `}
+    >
       <div
         css={css`
-          height: 100vh;
+          height: 10%;
         `}
       >
-        <div
-          css={css`
-            height: 10%;
-          `}
+        <button onClick={() => handleClick()}>++</button>
+        <button
+          onClick={() => {
+            if (Tone.Transport.state === "started") {
+              Tone.Transport.pause();
+            }
+          }}
         >
-          <button onClick={() => handleClick()}>++</button>
-          <button
-            onClick={() => {
-              // Tone.Transport.stop();
-
-              // Tone.Transport.stop(); // Returns timeline to position 0:0:0
-              // schaduleId.current && Tone.Transport.clear(schaduleId.current);
-              console.log(Tone.Transport);
-              // Tone.Transport.seconds = 10;
-              Tone.Transport.stop();
-
-              Tone.Transport.cancel();
-            }}
-          >
-            pause
-          </button>
-          <input
-            type="range"
-            min={0}
-            max={midiData?.duration}
-            onChange={(e) => {
-              Tone.Transport.seconds = Number(e.target.value);
-            }}
-          />
-        </div>
-
-        <NotesViz
-          ref={notesRef}
-          notes={notes}
-          setNotes={setNotes}
-          data={midiData}
-          isPlaying={isPlaying}
-        />
-
-        <svg
-          viewBox="0 0 600 300"
-          css={css`
-            display: block;
-            width: 100%;
-            height: 10%;
-          `}
-        ></svg>
+          pause
+        </button>
       </div>
-    </SynthProvider>
+
+      <NotesViz
+        ref={notesRef}
+        notes={notes}
+        setNotes={setNotes}
+        data={midiData}
+      />
+
+      <svg
+        viewBox="0 0 600 300"
+        css={css`
+          display: block;
+          width: 100%;
+          height: 10%;
+        `}
+      ></svg>
+    </div>
   );
 }
 
-export { useSynth, App };
+export { App };
